@@ -27,8 +27,8 @@ export async function POST(req: Request) {
             { role: "system", content: `You are a helpful assistant. Use the following context to answer the user's question: ${contextText}` },
             { role: 'user', content: message }
         ],
-        max_tokens: 150,
-        temperature: 0.7,
+        max_tokens: 300,
+        temperature: 1,
       })
     });
     const data = await aiRes.json();

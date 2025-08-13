@@ -1,103 +1,191 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import React, { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react';
+import {
+  Send,
+  User,
+  Bot,
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { cn } from '@/lib/utils';
+
+interface Message {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+interface ChatHistoryItem {
+  id: number;
+  title: string;
+  active: boolean;
+}
+
+const ChatLayout: React.FC = () => {
+const [messages, setMessages] = useState<Message[]>([]);
+
+  useEffect(() => {
+    setMessages([
+      {
+        id: 1,
+        role: 'assistant',
+        content: 'Hello! How can I help you today?',
+        timestamp: new Date().toLocaleTimeString()
+      }
+    ]);
+  }, []);
+  const [inputValue, setInputValue] = useState('');
+
+  const handleSendMessage = async () => {
+  if (!inputValue.trim()) return;
+
+  const newMessage: Message = {
+    id: messages.length + 1,
+    role: 'user',
+    content: inputValue,
+    timestamp: new Date().toLocaleTimeString()
+  };
+  setMessages((prev) => [...prev, newMessage]);
+  setInputValue('');
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: inputValue })
+    });
+
+    const data = await res.json();
+    // console.log(data.debug);
+
+    const aiResponse: Message = {
+      id: messages.length + 2,
+      role: 'assistant',
+      content: data.reply || 'No response from AI',
+      timestamp: new Date().toLocaleTimeString()
+    };
+
+    setMessages((prev) => [...prev, aiResponse]);
+  } catch (error) {
+    console.error('Error:', error);
+    const aiResponse: Message = {
+      id: messages.length + 2,
+      role: 'assistant',
+      content: 'Error contacting AI',
+      timestamp: new Date().toLocaleTimeString()
+    };
+    setMessages((prev) => [...prev, aiResponse]);
+  }
+};
+
+
+  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setInputValue(e.target.value);
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="flex h-screen bg-muted/20">
+      
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Main Chat */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-background border-b px-4 py-3 flex items-center gap-3">
+          <h1 className="text-lg font-semibold">Konsultan Visa AI</h1>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {/* Messages */}
+        <ScrollArea className="flex-1">
+          <div className="max-w-4xl mx-auto p-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={cn(
+                  'flex gap-4 mb-6',
+                  message.role === 'user' && 'justify-end'
+                )}
+              >
+                {message.role === 'assistant' && (
+                  <Avatar className="h-8 w-8 bg-green-500 text-white">
+                    <AvatarFallback>
+                      <Bot className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+
+                <div
+                  className={cn(
+                    'max-w-[70%]',
+                    message.role === 'user' && 'order-first'
+                  )}
+                >
+                  <div
+                    className={cn(
+                      'p-4 rounded-lg text-sm leading-relaxed whitespace-pre-wrap',
+                      message.role === 'user'
+                        ? 'bg-primary text-primary-foreground ml-auto'
+                        : 'bg-background border'
+                    )}
+                  >
+                    {message.content}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1 px-2">
+                    {message.timestamp}
+                  </p>
+                </div>
+
+                {message.role === 'user' && (
+                  <Avatar className="h-8 w-8 bg-primary text-white">
+                    <AvatarFallback>
+                      <User className="w-4 h-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                )}
+              </div>
+            ))}
+          </div>
+        </ScrollArea>
+
+        {/* Input */}
+        <div className="border-t bg-background p-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="relative flex items-end">
+              <Textarea
+                value={inputValue}
+                onChange={handleInputChange}
+                onKeyPress={handleKeyPress}
+                placeholder="Send a message..."
+                rows={1}
+                className="pr-12 resize-none"
+              />
+              <Button
+                size="icon"
+                className="absolute right-2 bottom-2"
+                onClick={handleSendMessage}
+                disabled={!inputValue.trim()}
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2 text-center">
+              Press Enter to send, Shift + Enter for new line
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default ChatLayout;

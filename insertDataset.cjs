@@ -4,17 +4,17 @@ const { createClient } = require('@supabase/supabase-js');
 require('dotenv').config();
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 async function insertDocument(content) {
   try {
-    const aiRes = await fetch(`${process.env.BASE_URL_AI}/embeddings`, {
+    const aiRes = await fetch(`${process.env.SUMOPOD_URL}/embeddings`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.API_KEY_AI}`
+        Authorization: `Bearer ${process.env.SUMOPOD_API_KEY}`
       },
       body: JSON.stringify({
         model: 'text-embedding-3-small',

@@ -19,12 +19,6 @@ interface Message {
   timestamp: string;
 }
 
-interface ChatHistoryItem {
-  id: number;
-  title: string;
-  active: boolean;
-}
-
 const ChatLayout: React.FC = () => {
 const [messages, setMessages] = useState<Message[]>([]);
 
@@ -60,7 +54,6 @@ const [messages, setMessages] = useState<Message[]>([]);
     });
 
     const data = await res.json();
-    // console.log(data.debug);
 
     const aiResponse: Message = {
       id: messages.length + 2,

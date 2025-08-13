@@ -38,7 +38,7 @@ async function insertDocument(content) {
 }
 
 async function insertDataset() {
-  const filePath = path.join(__dirname, 'src/data/dataset.txt');
+  const filePath = path.join(__dirname, 'src/data/faq.txt');
   const fileContent = fs.readFileSync(filePath, 'utf-8');
 
   const paragraphs = fileContent.split(/\n\n+/);

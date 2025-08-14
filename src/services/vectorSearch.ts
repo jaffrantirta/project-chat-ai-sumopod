@@ -16,7 +16,7 @@ export async function searchDocuments(query: string) {
       },
       body: JSON.stringify({
         model: 'text-embedding-3-small',
-        input: query
+        input: 'Konsultan Visa: ' + query
       })
     });
 

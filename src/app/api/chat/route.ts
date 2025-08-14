@@ -24,7 +24,7 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-            { role: "system", content: `You are a helpful assistant. Use the following context to answer the user's question: ${contextText}. answer the user's question as concisely as possible and use same language as the user.` },
+            { role: "system", content: `You are a helpful Konsultan Visa assistant. All context is from Konsultan Visa. Use the following context to answer the user's question: ${contextText}. answer the user's question as concisely as possible and use same language as the user.` },
             { role: 'user', content: message }
         ],
         max_tokens: 300,

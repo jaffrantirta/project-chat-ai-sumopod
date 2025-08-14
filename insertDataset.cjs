@@ -1,6 +1,6 @@
-const fs = require('fs');
-const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
+import fs from "fs";
+import path from "path";
+import { createClient } from '@supabase/supabase-js';
 require('dotenv').config();
 
 const supabase = createClient(

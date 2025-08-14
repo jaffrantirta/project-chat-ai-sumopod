@@ -1,11 +1,7 @@
 'use client';
 
 import React, { useState, KeyboardEvent, ChangeEvent, useEffect } from 'react';
-import {
-  Send,
-  User,
-  Bot,
-} from 'lucide-react';
+import { Send, User, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,61 +16,83 @@ interface Message {
 }
 
 const ChatLayout: React.FC = () => {
-const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [typingDots, setTypingDots] = useState('.');
 
   useEffect(() => {
     setMessages([
       {
         id: 1,
         role: 'assistant',
-        content: 'Hello! How can I help you today?',
-        timestamp: new Date().toLocaleTimeString()
-      }
+        content: 'Halo, ada yang bisa saya bantu? mau tanya tentang J1 Internship Program USA atau Study ke Australia atau negara lainnya? Silahkan kirim pesan.',
+        timestamp: new Date().toLocaleTimeString(),
+      },
     ]);
   }, []);
-  const [inputValue, setInputValue] = useState('');
+
+  // Animate typing dots
+  useEffect(() => {
+    if (!isTyping) return;
+    const interval = setInterval(() => {
+      setTypingDots((prev) => (prev.length < 3 ? prev + '.' : '.'));
+    }, 500);
+    return () => clearInterval(interval);
+  }, [isTyping]);
 
   const handleSendMessage = async () => {
-  if (!inputValue.trim()) return;
+    if (!inputValue.trim()) return;
 
-  const newMessage: Message = {
-    id: messages.length + 1,
-    role: 'user',
-    content: inputValue,
-    timestamp: new Date().toLocaleTimeString()
+    const newMessage: Message = {
+      id: messages.length + 1,
+      role: 'user',
+      content: inputValue,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setMessages((prev) => [...prev, newMessage]);
+    setInputValue('');
+
+    // Show typing indicator
+    setIsTyping(true);
+    const typingMessage: Message = {
+      id: messages.length + 2,
+      role: 'assistant',
+      content: 'Typing',
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setMessages((prev) => [...prev, typingMessage]);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: newMessage.content }),
+      });
+
+      const data = await res.json();
+
+      // Replace typing message with actual AI response
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === typingMessage.id
+            ? { ...msg, content: data.reply || 'No response from AI' }
+            : msg
+        )
+      );
+    } catch (error) {
+      console.error('Error:', error);
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === typingMessage.id
+            ? { ...msg, content: 'Error contacting AI' }
+            : msg
+        )
+      );
+    } finally {
+      setIsTyping(false);
+    }
   };
-  setMessages((prev) => [...prev, newMessage]);
-  setInputValue('');
-
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: inputValue })
-    });
-
-    const data = await res.json();
-
-    const aiResponse: Message = {
-      id: messages.length + 2,
-      role: 'assistant',
-      content: data.reply || 'No response from AI',
-      timestamp: new Date().toLocaleTimeString()
-    };
-
-    setMessages((prev) => [...prev, aiResponse]);
-  } catch (error) {
-    console.error('Error:', error);
-    const aiResponse: Message = {
-      id: messages.length + 2,
-      role: 'assistant',
-      content: 'Error contacting AI',
-      timestamp: new Date().toLocaleTimeString()
-    };
-    setMessages((prev) => [...prev, aiResponse]);
-  }
-};
-
 
   const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -89,8 +107,6 @@ const [messages, setMessages] = useState<Message[]>([]);
 
   return (
     <div className="flex h-screen bg-muted/20">
-      
-
       {/* Main Chat */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
@@ -131,7 +147,9 @@ const [messages, setMessages] = useState<Message[]>([]);
                         : 'bg-background border'
                     )}
                   >
-                    {message.content}
+                    {isTyping && message.content === 'Typing'
+                      ? `typing${typingDots}`
+                      : message.content}
                   </div>
                   <p className="text-xs text-muted-foreground mt-1 px-2">
                     {message.timestamp}

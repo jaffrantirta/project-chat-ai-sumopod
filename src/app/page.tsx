@@ -15,7 +15,11 @@ const ChatLayout: React.FC = () => {
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [typingDots, setTypingDots] = useState('.');
+  const [isMobile, setIsMobile] = useState(false);
+  const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const initialViewportHeight = useRef<number>(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -24,6 +28,39 @@ const ChatLayout: React.FC = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    // Detect mobile device
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    // Store initial viewport height
+    initialViewportHeight.current = window.innerHeight;
+
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleViewportChange = () => {
+      const currentHeight = window.innerHeight;
+      const heightDifference = initialViewportHeight.current - currentHeight;
+      
+      // If height decreased by more than 150px, keyboard is likely open
+      setIsKeyboardOpen(heightDifference > 150);
+    };
+
+    window.addEventListener('resize', handleViewportChange);
+    
+    return () => {
+      window.removeEventListener('resize', handleViewportChange);
+    };
+  }, [isMobile]);
 
   useEffect(() => {
     setMessages([
@@ -45,57 +82,67 @@ const ChatLayout: React.FC = () => {
     return () => clearInterval(interval);
   }, [isTyping]);
 
+  const handleInputFocus = () => {
+    if (isMobile) {
+      setTimeout(() => {
+        inputRef.current?.scrollIntoView({ 
+          behavior: 'smooth',
+          block: 'nearest'
+        });
+      }, 300); // Delay to allow keyboard to open
+    }
+  };
+
   const handleSendMessage = async () => {
-  if (!inputValue.trim()) return;
+    if (!inputValue.trim()) return;
 
-  const newMessage: Message = {
-    id: messages.length + 1,
-    role: 'user',
-    content: inputValue,
-    timestamp: new Date().toLocaleTimeString(),
+    const newMessage: Message = {
+      id: messages.length + 1,
+      role: 'user',
+      content: inputValue,
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    
+    const updatedMessages = [...messages, newMessage];
+    setMessages(updatedMessages);
+    setInputValue('');
+
+    setIsTyping(true);
+    const typingMessage: Message = {
+      id: messages.length + 2,
+      role: 'assistant',
+      content: 'Typing',
+      timestamp: new Date().toLocaleTimeString(),
+    };
+    setMessages(prev => [...prev, typingMessage]);
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: updatedMessages.map(m => ({
+            role: m.role,
+            content: m.content
+          }))
+        }),
+      });
+
+      const data = await res.json();
+
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === typingMessage.id
+            ? { ...msg, content: data.reply || 'No response from AI' }
+            : msg
+        )
+      );
+    } catch (error) {
+      console.error('Error:', error);
+    } finally {
+      setIsTyping(false);
+    }
   };
-  
-  const updatedMessages = [...messages, newMessage];
-  setMessages(updatedMessages);
-  setInputValue('');
-
-  setIsTyping(true);
-  const typingMessage: Message = {
-    id: messages.length + 2,
-    role: 'assistant',
-    content: 'Typing',
-    timestamp: new Date().toLocaleTimeString(),
-  };
-  setMessages(prev => [...prev, typingMessage]);
-
-  try {
-    const res = await fetch('/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        messages: updatedMessages.map(m => ({
-          role: m.role,
-          content: m.content
-        }))
-      }),
-    });
-
-    const data = await res.json();
-
-    setMessages(prev =>
-      prev.map(msg =>
-        msg.id === typingMessage.id
-          ? { ...msg, content: data.reply || 'No response from AI' }
-          : msg
-      )
-    );
-  } catch (error) {
-    console.error('Error:', error);
-  } finally {
-    setIsTyping(false);
-  }
-};
-
 
   const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -109,17 +156,17 @@ const ChatLayout: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className={`flex flex-col bg-gray-50 ${isMobile && isKeyboardOpen ? 'h-screen' : 'h-screen'}`}>
       {/* Fixed Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3 shadow-sm">
+      <div className="fixed top-0 left-0 right-0 z-10 bg-white border-b border-gray-200 px-6 py-4 flex items-center gap-3 shadow-sm">
         <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
           <Bot className="w-4 h-4 text-white" />
         </div>
         <h1 className="text-lg font-semibold text-gray-800">Konsultan Visa AI</h1>
       </div>
 
-      {/* Scrollable Messages Area */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      {/* Scrollable Messages Area with top and bottom padding for fixed elements */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 mt-16 mb-20">
         <div className="max-w-4xl mx-auto space-y-6">
           {messages.map((message) => (
             <div
@@ -164,16 +211,20 @@ const ChatLayout: React.FC = () => {
       </div>
 
       {/* Fixed Input Area */}
-      <div className="border-t border-gray-200 bg-white p-4">
+      <div className={`fixed bottom-0 left-0 right-0 z-10 border-t border-gray-200 bg-white p-4 ${
+        isMobile && isKeyboardOpen ? 'transform transition-transform duration-300' : ''
+      }`}>
         <div className="max-w-4xl mx-auto">
           <div className="relative flex items-end">
             <textarea
+              ref={inputRef}
               value={inputValue}
               onChange={handleInputChange}
               onKeyDown={handleKeyPress}
+              onFocus={handleInputFocus}
               placeholder="Send a message..."
               rows={1}
-              className="flex-1 resize-none border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="flex-1 resize-none border border-gray-300 rounded-lg px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32 min-h-[44px]"
             />
             <button
               onClick={handleSendMessage}

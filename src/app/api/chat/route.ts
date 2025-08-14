@@ -3,16 +3,17 @@ import { NextResponse } from 'next/server';
 require('dotenv').config();
 
 export async function POST(req: Request) {
-  const { message } = await req.json();
+  const { messages } = await req.json();
 
-  if (!message) {
-    return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+  if (!messages || !Array.isArray(messages)) {
+    return NextResponse.json({ error: 'Messages array is required' }, { status: 400 });
   }
 
-  const contextDocs: { id: string; content: string }[] = await searchDocuments(message);
+  const someUserMessage = messages.filter(m => m.role === 'user').slice(-3).map(m => m.content).join("\n\n");
+  const lastUserMessage = messages.filter(m => m.role === 'user').pop()?.content || '';
+  const contextDocs: { id: string; content: string }[] =  await searchDocuments(`${someUserMessage}`);
   const contextText = contextDocs.map(doc => doc.content).join("\n\n");
-
-  console.log('contextText: '+contextText);
+  const today = new Date();
 
   try {
     const aiRes = await fetch(`${process.env.SUMOPOD_URL}/chat/completions`, {
@@ -24,22 +25,19 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-            { role: "system", content: `You are a helpful Konsultan Visa assistant. All context is from Konsultan Visa. Use the following context to answer the user's question: ${contextText}. answer the user's question as concisely as possible and use same language as the user.` },
-            { role: 'user', content: message }
+          { role: "system", content: `You are a helpful Konsultan Visa assistant. All context is from Konsultan Visa. Use the following context: ${contextText}. Keep answers concise and in the user's language. Today is ${today.toDateString()}.` },
+          { role: 'user', content: lastUserMessage }
         ],
         max_tokens: 300,
-        temperature: 1,
+        temperature: 0.7,
       })
     });
     const data = await aiRes.json();
-    let aiMessage = data.choices?.[0]?.message?.content?.trim() || '';
-    if (!aiMessage && data.choices?.[0]?.finish_reason === 'length') {
-      aiMessage = '[⚠️ AI output truncated due to token limit]';
-    }
-    return NextResponse.json({reply: aiMessage || 'No response'});
+    return NextResponse.json({ reply: data.choices?.[0]?.message?.content?.trim() || 'No response' });
   } catch (error) {
     console.error('AI API error:', error);
     return NextResponse.json({ error: 'Failed to contact AI' }, { status: 500 });
   }
 }
+
 

@@ -1,7 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { createClient } from '@supabase/supabase-js';
-require('dotenv').config();
+import "dotenv/config";
+
 
 const supabase = createClient(
   process.env.SUPABASE_URL,

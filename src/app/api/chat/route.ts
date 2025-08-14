@@ -1,6 +1,7 @@
 import { searchDocuments } from '@/services/vectorSearch';
 import { NextResponse } from 'next/server';
-require('dotenv').config();
+import "dotenv/config";
+
 
 export async function POST(req: Request) {
   const { messages } = await req.json();

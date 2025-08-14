@@ -26,11 +26,11 @@ export async function POST(req: Request) {
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [
-          { role: "system", content: `You are a helpful Konsultan Visa assistant. All context is from Konsultan Visa. Use the following context: ${contextText}. Keep answers concise and in the user's language. Today is ${today.toDateString()}.` },
+          { role: "system", content: `You are a helpful Konsultan Visa assistant. All context is about "Konsultan Visa". Use the following context: ${contextText}. Keep answers concise and in the user's language. dont use markdown format. Today is ${today.toDateString()}. If the message is an inquiry, answer it using only the provided information. If unsure about the answer to an inquiry, state that your knowledge is limited to the specific information provided by this business.If there are multiple inquiries in a message, answer them one by one. Refuse to tell jokes. at the end of your answer, ask user related questions about main idea to make friendly conversation. use friendly tone, don't be too formal.` },
           { role: 'user', content: lastUserMessage }
         ],
         max_tokens: 300,
-        temperature: 0.7,
+        temperature: 1,
       })
     });
     const data = await aiRes.json();

@@ -2,13 +2,13 @@ import { chromium } from "playwright";
 import { createClient } from "@supabase/supabase-js";
 import "dotenv/config";
 
-// --- Supabase Client ---
+
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-// --- CLI ARG PARSING ---
+
 const args = process.argv.slice(2);
 let startUrl = null;
 
@@ -24,16 +24,16 @@ if (!startUrl) {
   process.exit(1);
 }
 
-// --- State ---
+
 const visited = new Set();
 const baseDomain = new URL(startUrl).origin;
 
-// --- Helpers ---
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// --- Use SUMOPOD GPT-4o-mini to organize text ---
+
 async function organizeText(rawText, url) {
   try {
     const res = await fetch(`${process.env.SUMOPOD_URL}/chat/completions`, {
@@ -64,11 +64,11 @@ async function organizeText(rawText, url) {
     return organized;
   } catch (err) {
     console.error("❌ Error organizing text:", err.message);
-    return rawText; // fallback to raw text
+    return rawText; 
   }
 }
 
-// --- Generate embedding with SUMOPOD ---
+
 async function generateEmbedding(text) {
   try {
     const res = await fetch(`${process.env.SUMOPOD_URL}/embeddings`, {
@@ -91,7 +91,7 @@ async function generateEmbedding(text) {
   }
 }
 
-// --- Insert organized content + embedding into Supabase ---
+
 async function insertDocument(title, url, content, embedding) {
   try {
     const { error } = await supabase.from("documents").insert([
@@ -104,7 +104,7 @@ async function insertDocument(title, url, content, embedding) {
   }
 }
 
-// --- Extract visible text from HTML ---
+
 function extractTextFromHTML(html) {
   const cheerio = require("cheerio");
   const $ = cheerio.load(html);
@@ -114,7 +114,7 @@ function extractTextFromHTML(html) {
   return text;
 }
 
-// --- Crawl pages recursively ---
+
 async function crawl(url) {
   if (visited.has(url)) return;
   visited.add(url);
@@ -133,7 +133,7 @@ async function crawl(url) {
       const organizedText = await organizeText(rawText, url);
       const embedding = await generateEmbedding(organizedText);
 
-      // Extract first line as title
+      
       const titleLine = organizedText.split("\n")[0] || url;
 
       await insertDocument(titleLine, url, organizedText, embedding);
@@ -156,7 +156,7 @@ async function crawl(url) {
   }
 }
 
-// --- Start ---
+
 (async () => {
   console.log(`🚀 Starting crawl from ${startUrl}`);
   await crawl(startUrl);
